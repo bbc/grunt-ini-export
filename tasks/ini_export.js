@@ -46,48 +46,56 @@ module.exports = function(grunt) {
             return removeKeys(key);
         },
 
-        processedIni = {};
+
+        processedIni = [];
 
 
         this.files.forEach(function(f) {
-            processedIni[path.basename(f.src).replace('.ini', '')] = f.src.map(function(filepath) {
-                if (!grunt.file.exists(filepath)) {
-                    grunt.log.warn('Source file "' + filepath + '" not found.');
-                    return false;
-                } else {
-                    var items = [],
-                        parsed = ini.parse(grunt.file.read(filepath)),
-                        keys  = _.keys(parsed),
-                        name =  keys[0].split('.')[0],
-                        obj = {},
-                        processed = {},
-                        i, l = keys.length;
+            var filename = path.basename(f.src).replace('.ini', ''),
+                data = f.src.map(function(filepath) {
+                    if (!grunt.file.exists(filepath)) {
+                        grunt.log.warn('Source file "' + filepath + '" not found.');
+                        return false;
+                    } else {
+                        var items = [],
+                            parsed = ini.parse(grunt.file.read(filepath)),
+                            keys  = Object.keys(parsed),
+                            name =  keys[0].split('.')[0],
+                            obj = {},
+                            processed = {},
+                            i, l = keys.length;
 
-                    for (i = 0; i < l; i ++) {
-                        var value = parsed[keys[i]],
-                            currentName = keys[i].split('.')[0],
-                            currentKey = keys[i].replace(name + '.', '');
+                        for (i = 0; i < l; i++) {
 
-                        if (name === currentName) {
-                            obj.name = currentName;
-                            currentKey = processKeys(currentKey);
-                            if (currentKey) {
-                                obj[currentKey] = value;
+                            var value = parsed[keys[i]],
+                                currentName = keys[i].split('.')[0],
+                                currentKey = keys[i].replace(name + '.', '');
+
+                            if (name === currentName || i === l - 1) {
+                                obj.name = currentName;
+                                currentKey = processKeys(currentKey);
+                                if (currentKey) {
+                                    obj[currentKey] = value;
+                                }
+
+                                if (i === l - 1) {
+                                    items.push(obj);
+                                }
+                            }else {
+                                items.push(obj)
+                                name = currentName;
+                                obj = {};
                             }
-                        }else {
-                            items.push(obj)
-                            name = currentName;
-                            obj = {};
                         }
-                    }
-                    return items;
-                }
+                        return items;
+                    };
             });
+            processedIni.push('window.' + options.namespace + '["' + filename + '"] = ' + JSON.stringify(data[0], null, 4));
 
-            processedIni = 'window.' + options.namespace + ' = ' + JSON.stringify(processedIni, null, 4);
-            grunt.file.write(options.outfile, processedIni);
-            grunt.log.writeln('File "' + options.outfile + '" created.');
         });
+
+        grunt.file.write(options.outfile, processedIni.join(''));
+        grunt.log.writeln('File "' + options.outfile + '" created.');
     });
 
 };
