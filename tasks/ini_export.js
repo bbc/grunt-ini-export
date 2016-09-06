@@ -51,7 +51,7 @@ module.exports = function(grunt) {
 
 
         this.files.forEach(function(f) {
-            var filename = path.basename(f.src).replace('.ini', ''),
+            var filename = path.basename(f.src[0]).replace('.ini', ''),
                 data = f.src.map(function(filepath) {
                     if (!grunt.file.exists(filepath)) {
                         grunt.log.warn('Source file "' + filepath + '" not found.');
